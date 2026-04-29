@@ -1,0 +1,161 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [288, -96],
+      "id": "3c3baf9d-68ef-492e-9748-5d8afac54838",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "filters": {
+          "labelIds": ["UNREAD"]
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [512, -96],
+      "id": "1d172739-f860-4c47-863b-b4c033dd06ec",
+      "name": "Get many messages"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}",
+        "simple": false,
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [736, -96],
+      "id": "62310e55-4d93-436c-a4d6-cc864a94b9c4",
+      "name": "Get a message"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Subject: {{ $json.headers.subject }}\n\nEmail body:{{ $json.text }}\n\nsender name:{{ $json.from.value[0].name }}\nWrite a professional, human-like reply.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "<AgentInstructions>\n\n    <Role>\n        <Name>Email Reply Agent</Name>\n        <Description>A helpful email reply agent.</Description>\n    </Role>\n\n    <Goal>\n        <Primary>\n            Draft custom but very professional email replies which are 100% human-like.\n        </Primary>\n        <Secondary>\n            Build trust and reputation with the person you are replying to,\n            not just send a basic reply.\n        </Secondary>\n    </Goal>\n\n    <Instructions>\n        <Instruction>\n            Carefully read the full email including subject and body before replying.\n        </Instruction>\n        <Instruction>\n            Understand the context, sender intent, and important details before drafting.\n        </Instruction>\n        <Instruction>\n            Write professional replies using provided user info where necessary.\n        </Instruction>\n    </Instructions>\n\n    <UserInfo>\n        <Details>\n            <Detail name=\"User Name\">Muhammad Masood Anwar</Detail>\n            <Detail name=\"Company\">AI Learners Pakistan</Detail>\n            <Detail name=\"Age\">24</Detail>\n        </Details>\n        <Aims>\n            <Aim name=\"Mission\">Wants to teach AI to people in the most simple way.</Aim>\n            <Aim name=\"Focus\">Focus on teaching rather than collaborations and promotions.</Aim>\n            <Aim name=\"Community Focus\">Focus on community building right now.</Aim>\n        </Aims>\n    </UserInfo>\n\n    <Examples>\n        <Example>\n            <UserInput>\nSubject: Promotional message\nThis message is regarding a promotion that we are going on doing.\n            </UserInput>\n            <UserOutput>\nHi [Sender's Name],\n\nThank you so much for reaching out and thinking of us at AI Learners Pakistan.\nAt the moment, my primary focus is on building a strong educational foundation\nand nurturing our community.\n\nThat being said, I truly appreciate your message. Let's definitely stay\nconnected as the community grows.\n\nWarm regards,\nMuhammad Masood Anwar\nFounder, AI Learners Pakistan\n            </UserOutput>\n        </Example>\n        <Example>\n            <UserInput>\nSubject: Requesting meeting time\nHey brother, I actually wanted your meeting time for Tuesday morning of this month.\nWould that be possible?\n            </UserInput>\n            <UserOutput>\nHey [Sender's Name],\n\nHope you're doing great, brother!\nThanks for reaching out — I appreciate you thinking of me.\n\nTuesday morning sounds good 👍\nCould you please let me know the exact time you're aiming for?\nMy schedule is quite packed with ongoing community sessions and\nAI learning projects, but I'll definitely try to accommodate.\n\nLooking forward to catching up!\n\nBest regards,\nMuhammad Masood Anwar\nFounder, AI Learners Pakistan\n            </UserOutput>\n        </Example>\n    </Examples>\n\n</AgentInstructions>"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [960, -96],
+      "id": "d856ab1e-644c-4077-ac90-a11eb8ed139a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [1040, 128],
+      "id": "8e4da2c6-4655-47dc-b72b-db43ea3c60ca",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Mail recieved data"
+        },
+        "table": {
+          "__rl": true,
+          "value": "YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Table 1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Response": "={{ $json.output }}",
+            "Sender Name": "={{ $('Get a message').item.json.from.value[0].name }}",
+            "Email Body": "={{ $('Get a message').item.json.text }}",
+            "Sender Email": "={{ $('Get a message').item.json.from.value[0].address }}"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [1312, -80],
+      "id": "20d7a09b-56bc-4c2f-a19e-6040c0b944af",
+      "name": "Create a record"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.fields['Sender Email'] }}",
+        "subject": "={{ $json.fields['Sender Name'] }}",
+        "emailType": "text",
+        "message": "={{ $json.fields.Response }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1488, -176],
+      "id": "348766ed-7bc0-47b8-9ea7-6cf21a8dc9dd",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Get a message').item.json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [1696, -80],
+      "id": "6be70e01-dda2-4c0a-a042-e72d7c710fb8",
+      "name": "Mark a message as read"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{ "node": "Get many messages", "type": "main", "index": 0 }]]
+    },
+    "Get many messages": {
+      "main": [[{ "node": "Get a message", "type": "main", "index": 0 }]]
+    },
+    "Get a message": {
+      "main": [[{ "node": "AI Agent", "type": "main", "index": 0 }]]
+    },
+    "AI Agent": {
+      "main": [[{ "node": "Create a record", "type": "main", "index": 0 }]]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [[{ "node": "AI Agent", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "Create a record": {
+      "main": [[{ "node": "Send a message", "type": "main", "index": 0 }]]
+    },
+    "Send a message": {
+      "main": [[{ "node": "Mark a message as read", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "YOUR_N8N_INSTANCE_ID"
+  }
+}
